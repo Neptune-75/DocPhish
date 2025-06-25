@@ -49,11 +49,39 @@ fi
 echo "Installing/updating npm dependencies..."
 npm install
 
+echo "Enter admin key for this session (leave blank for random):"
+read ADMIN_KEY
+if [ -z "$ADMIN_KEY" ]; then
+    ADMIN_KEY=$(openssl rand -hex 16)
+    echo "Generated random admin key: $ADMIN_KEY"
+fi
+export ADMIN_KEY
+
 echo "Starting Node.js server in the background..."
-node server.js > server.log 2>&1 &
+ADMIN_KEY="$ADMIN_KEY" node server.js > server.log 2>&1 &
 SERVER_PID=$!
 
-sleep 3
+# Function to check if server is up
+function wait_for_server() {
+    local retries=10
+    local wait=1
+    for ((i=0; i<retries; i++)); do
+        if curl -s http://127.0.0.1:3000 > /dev/null; then
+            return 0
+        fi
+        sleep $wait
+    done
+    return 1
+}
+
+echo "Waiting for Node.js server to be ready on 127.0.0.1:3000..."
+if wait_for_server; then
+    echo "Node.js server is up."
+else
+    echo "Error: Node.js server did not start on 127.0.0.1:3000."
+    kill $SERVER_PID
+    exit 1
+fi
 
 echo "Do you want to use a custom Cloudflare Tunnel domain? (y/N)"
 read USE_CUSTOM
@@ -65,7 +93,6 @@ if [[ "$USE_CUSTOM" =~ ^[Yy]$ ]]; then
     cloudflared tunnel run "$TUNNEL_NAME"
 else
     echo "Starting Cloudflare Tunnel with a random subdomain..."
-    # Use 127.0.0.1 to avoid IPv6 issues
     cloudflared tunnel --url http://127.0.0.1:3000 > cloudflared.log 2>&1 &
     TUNNEL_PID=$!
 
@@ -76,6 +103,7 @@ else
       echo "Could not find public URL. Check cloudflared.log for errors."
     else
       echo "Your public URL: $PUBLIC_URL"
+      echo "Gallery access: $PUBLIC_URL/gallery?key=$ADMIN_KEY"
       echo "Share this link with your target."
     fi
 
