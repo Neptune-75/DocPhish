@@ -53,7 +53,7 @@ echo "Starting Node.js server in the background..."
 node server.js > server.log 2>&1 &
 SERVER_PID=$!
 
-sleep 2
+sleep 3
 
 echo "Do you want to use a custom Cloudflare Tunnel domain? (y/N)"
 read USE_CUSTOM
@@ -65,7 +65,22 @@ if [[ "$USE_CUSTOM" =~ ^[Yy]$ ]]; then
     cloudflared tunnel run "$TUNNEL_NAME"
 else
     echo "Starting Cloudflare Tunnel with a random subdomain..."
-    cloudflared tunnel --url http://localhost:3000
+    # Use 127.0.0.1 to avoid IPv6 issues
+    cloudflared tunnel --url http://127.0.0.1:3000 > cloudflared.log 2>&1 &
+    TUNNEL_PID=$!
+
+    # Wait for the tunnel to initialize and extract the public URL
+    sleep 8
+    PUBLIC_URL=$(grep -o 'https://[-a-zA-Z0-9.]*trycloudflare.com' cloudflared.log | head -n 1)
+    if [ -z "$PUBLIC_URL" ]; then
+      echo "Could not find public URL. Check cloudflared.log for errors."
+    else
+      echo "Your public URL: $PUBLIC_URL"
+      echo "Share this link with your target."
+    fi
+
+    # Wait for background processes (server and tunnel)
+    wait $TUNNEL_PID
 fi
 
 trap "kill $SERVER_PID" EXIT
