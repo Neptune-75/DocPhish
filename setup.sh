@@ -1,13 +1,5 @@
 #!/bin/bash
 
-echo "Updating system packages (optional, press Ctrl+C to skip)..."
-sleep 1
-if [ "$(uname)" == "Linux" ]; then
-  sudo apt-get update && sudo apt-get upgrade -y
-elif [ "$(uname)" == "Darwin" ]; then
-  brew update
-fi
-
 echo "Checking for Node.js and npm..."
 if ! command -v node &> /dev/null; then
     echo "Node.js is not installed. Please install Node.js and try again."
@@ -20,8 +12,38 @@ fi
 
 echo "Checking for cloudflared..."
 if ! command -v cloudflared &> /dev/null; then
-    echo "cloudflared is not installed. Please install it from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
-    exit 1
+    echo "cloudflared not found, installing..."
+    OS=$(uname -s)
+    ARCH=$(uname -m)
+    if [[ "$OS" == "Linux" ]]; then
+      if [[ "$ARCH" == "x86_64" ]]; then
+        URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+      elif [[ "$ARCH" == "aarch64" ]]; then
+        URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+      elif [[ "$ARCH" == "armv7l" ]]; then
+        URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm"
+      else
+        echo "Unsupported architecture: $ARCH"
+        exit 1
+      fi
+    elif [[ "$OS" == "Darwin" ]]; then
+      URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64"
+    else
+      echo "Unsupported OS: $OS"
+      exit 1
+    fi
+
+    curl -L -o cloudflared $URL
+    chmod +x cloudflared
+    sudo mv cloudflared /usr/local/bin/
+
+    if ! command -v cloudflared &> /dev/null; then
+      echo "cloudflared installation failed. Please install manually."
+      exit 1
+    fi
+    echo "cloudflared installed successfully."
+else
+    echo "cloudflared is already installed"
 fi
 
 echo "Installing/updating npm dependencies..."
